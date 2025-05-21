@@ -2,6 +2,7 @@
 using System.Data;
 using System.Globalization;
 using System.Text.Json;
+using AutoMapper;
 using Dapper;
 using HelloWorld.Data;
 using HelloWorld.Models;
@@ -20,43 +21,102 @@ namespace HelloWorld
                 .Build();
             DataContextDapper dapper = new DataContextDapper(config);
 
-            string computersJson = File.ReadAllText("computers.json");
-            Console.WriteLine(computersJson);
+            string computersJson = File.ReadAllText("computersSnake.json");
 
-
-            // NEW VERSION OF JSON
-            JsonSerializerOptions options = new JsonSerializerOptions()
+            Mapper mapper = new Mapper(new MapperConfiguration((cfg) =>
             {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            };
+                cfg.CreateMap<ComputerSnake, Computer>()
+                    .ForMember(destination =>
+                        destination.ComputerId, options =>
+                            options.MapFrom(source =>
+                                source.computer_id))
+                    .ForMember(destination =>
+                        destination.Motherboard, options =>
+                            options.MapFrom(source =>
+                                source.motherboard))
+                    .ForMember(destination =>
+                        destination.CPUCores, options =>
+                            options.MapFrom(source =>
+                                source.cpu_cores))
+                    .ForMember(destination =>
+                        destination.HasWifi, options =>
+                            options.MapFrom(source =>
+                                source.has_wifi))
+                    .ForMember(destination =>
+                        destination.HasLTE, options =>
+                            options.MapFrom(source =>
+                                source.has_lte))
+                    .ForMember(destination =>
+                        destination.ReleaseDate, options =>
+                            options.MapFrom(source =>
+                                source.release_date))
+                    .ForMember(destination =>
+                        destination.Price, options =>
+                            options.MapFrom(source =>
+                                source.price))
+                    .ForMember(destination =>
+                        destination.VideoCard, options =>
+                            options.MapFrom(source =>
+                                source.video_card));
+            }));
 
-            IEnumerable<Computer>? computers = JsonSerializer.Deserialize<IEnumerable<Computer>>(computersJson, options);
 
-            if (computers != null)
+            // Console.WriteLine(computersJson);
+
+
+            // // NEW VERSION OF JSON
+            // JsonSerializerOptions options = new JsonSerializerOptions()
+            // {
+            //     PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            // };
+
+
+            //  USING MAPPING
+            IEnumerable<ComputerSnake>? computerSystemMapped = JsonSerializer.Deserialize<IEnumerable<ComputerSnake>>(computersJson);
+
+            if (computerSystemMapped != null)
             {
-                foreach (Computer computer in computers)
-                {
-                    string sql = @"INSERT INTO TutorialAppSchema.Computer (
-                        Motherboard,
-                        HasWifi,
-                        HasLTE,
-                        ReleaseDate,
-                        Price,
-                        VideoCard
-                    ) VALUES ('" + EscapeSingleQuote(computer.Motherboard)
-                            + "','" + computer.HasWifi
-                            + "','" + computer.HasLTE
-                            + "','" + (computer.ReleaseDate != null ? computer.ReleaseDate.Value.ToString("yyyy-MM-dd") : "")
-                            + "','" + computer.Price.ToString("0.00", CultureInfo.InvariantCulture)
-                            + "','" + EscapeSingleQuote(computer.VideoCard)
-                    + "')\n";
-                    dapper.ExecuteSql(sql);
-                }
+                IEnumerable<Computer> computerResult = mapper.Map<IEnumerable<Computer>>(computerSystemMapped);
+                Console.WriteLine("Automapper Count: " + computerResult.Count());
+                // foreach (Computer computer in computerResult)
+                // {
+                //     Console.WriteLine(computer.Motherboard);
+                // }
             }
 
-            string computersCopySystem = JsonSerializer.Serialize(computers, options);
+            // USING JSON PROPERTYNAME
+            IEnumerable<Computer>? computerSystem = JsonSerializer.Deserialize<IEnumerable<Computer>>(computersJson);
+            Console.WriteLine("JSON Property Count: " + computerSystem.Count()); 
+            // foreach (Computer computer in computerSystem)
+            // {
+            //     Console.WriteLine(computer.Motherboard);
+            // }
 
-            File.WriteAllText("computersCopySystem.txt", computersCopySystem);
+            // if (computers != null)
+            // {
+            //     foreach (Computer computer in computers)
+            //     {
+            //         string sql = @"INSERT INTO TutorialAppSchema.Computer (
+            //             Motherboard,
+            //             HasWifi,
+            //             HasLTE,
+            //             ReleaseDate,
+            //             Price,
+            //             VideoCard
+            //         ) VALUES ('" + EscapeSingleQuote(computer.Motherboard)
+            //                 + "','" + computer.HasWifi
+            //                 + "','" + computer.HasLTE
+            //                 + "','" + (computer.ReleaseDate != null ? computer.ReleaseDate.Value.ToString("yyyy-MM-dd") : "")
+            //                 + "','" + computer.Price.ToString("0.00", CultureInfo.InvariantCulture)
+            //                 + "','" + EscapeSingleQuote(computer.VideoCard)
+            //         + "')\n";
+            //         dapper.ExecuteSql(sql);
+            //     }
+            // }
+
+            // string computersCopySystem = JsonSerializer.Serialize(computers, options);
+
+            // File.WriteAllText("computersCopySystem.txt", computersCopySystem);
 
         }
 
